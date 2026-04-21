@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>FIFAResell - Official Ticket Marketplace</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Barlow Condensed','Segoe UI',sans-serif;background:#edf2f9;}
+::-webkit-scrollbar{width:5px;}
+::-webkit-scrollbar-thumb{background:#002F6C;border-radius:3px;}
+@keyframes fadein{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.fi{animation:fadein .3s ease forwards;}
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-16px)}}
+.ball{animation:bounce 2s ease-in-out infinite;position:fixed;bottom:72px;right:18px;z-index:50;pointer-events:none;font-size:28px;opacity:.55;}
+button{cursor:pointer;font-family:'Barlow Condensed','Segoe UI',sans-serif;}
+input,select,textarea{font-family:'Barlow Condensed','Segoe UI',sans-serif;}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const {useState,useEffect,useRef}=React;
+
+const B=”#002F6C”,A=”#00A3E0”,G=”#16a34a”,R=”#dc2626”,ADM=“oemiish@gmail.com”;
+const WC=new Date(“2026-06-11T19:00:00”);
+
+const SELLERS=[
+{name:“Marcus T.”,av:“MT”,sold:47,loc:“London, UK”},
+{name:“Jordan K.”,av:“JK”,sold:31,loc:“New York, USA”},
+{name:“Alex Rivera”,av:“AR”,sold:58,loc:“Dubai, UAE”},
+{name:“Sam Chen”,av:“SC”,sold:23,loc:“Toronto, CA”},
+{name:“Tyler Brooks”,av:“TB”,sold:62,loc:“Paris, FR”},
+];
+const REVIEWS=[
+{u:“Peter A.”,t:“Got my tickets in minutes. Super smooth!”,m:“Brazil vs Argentina”},
+{u:“Lena K.”,t:“Very professional. Trusted the escrow 100%.”,m:“England vs France”},
+{u:“Omar S.”,t:“Ticket exactly as described. Amazing service.”,m:“FIFA World Cup Final”},
+{u:“Nina R.”,t:“10/10 would buy again. Fast and reliable.”,m:“Semi-Final 1”},
+{u:“Jake M.”,t:“Delivered straight to my chat. Activated perfectly.”,m:“Germany vs Spain”},
+{u:“Priya D.”,t:“Couldn’t find tickets elsewhere. They delivered!”,m:“USA vs Mexico”},
+];
+const MATCHES=[
+{id:1,n:“USA vs Mexico”,g:“Group A”,d:“2026-06-11”,t:“19:00”,v:“SoFi Stadium, Los Angeles”,p:350,s:“Group Stage”},
+{id:2,n:“Brazil vs Argentina”,g:“Group B”,d:“2026-06-13”,t:“20:00”,v:“MetLife Stadium, New Jersey”,p:650,s:“Group Stage”},
+{id:3,n:“England vs France”,g:“Group C”,d:“2026-06-15”,t:“18:00”,v:“AT&T Stadium, Dallas”,p:575,s:“Group Stage”},
+{id:4,n:“Germany vs Spain”,g:“Group D”,d:“2026-06-17”,t:“20:00”,v:“Levi Stadium, San Francisco”,p:550,s:“Group Stage”},
+{id:5,n:“Portugal vs Morocco”,g:“Group E”,d:“2026-06-19”,t:“18:00”,v:“BC Place, Vancouver”,p:400,s:“Group Stage”},
+{id:6,n:“Japan vs Senegal”,g:“Group F”,d:“2026-06-21”,t:“16:00”,v:“Estadio Azteca, Mexico City”,p:320,s:“Group Stage”},
+{id:7,n:“Netherlands vs Belgium”,g:“Group G”,d:“2026-06-23”,t:“20:00”,v:“Mercedes-Benz Stadium, Atlanta”,p:475,s:“Group Stage”},
+{id:8,n:“Uruguay vs Colombia”,g:“Group H”,d:“2026-06-25”,t:“18:00”,v:“Arrowhead Stadium, Kansas City”,p:360,s:“Group Stage”},
+{id:9,n:“Round of 16 Match A”,g:””,d:“2026-07-04”,t:“18:00”,v:“Gillette Stadium, Boston”,p:800,s:“Round of 16”},
+{id:10,n:“Round of 16 Match B”,g:””,d:“2026-07-05”,t:“20:00”,v:“NRG Stadium, Houston”,p:800,s:“Round of 16”},
+{id:11,n:“Quarter-Final 1”,g:””,d:“2026-07-10”,t:“20:00”,v:“MetLife Stadium, New Jersey”,p:1200,s:“Quarter-Final”},
+{id:12,n:“Quarter-Final 2”,g:””,d:“2026-07-11”,t:“18:00”,v:“SoFi Stadium, Los Angeles”,p:1200,s:“Quarter-Final”},
+{id:13,n:“Semi-Final 1”,g:””,d:“2026-07-14”,t:“20:00”,v:“AT&T Stadium, Dallas”,p:1800,s:“Semi-Final”},
+{id:14,n:“Semi-Final 2”,g:””,d:“2026-07-15”,t:“20:00”,v:“MetLife Stadium, New Jersey”,p:1800,s:“Semi-Final”},
+{id:15,n:“FIFA World Cup Final”,g:””,d:“2026-07-19”,t:“18:00”,v:“MetLife Stadium, New Jersey”,p:3500,s:“Final”},
+];
+const STAGE_C={“Group Stage”:{bg:”#ddeeff”,c:A},“Round of 16”:{bg:”#fff3e0”,c:”#d97706”},“Quarter-Final”:{bg:”#fce4ec”,c:”#dc2626”},“Semi-Final”:{bg:”#f3e5f5”,c:”#7c3aed”},“Final”:{bg:B,c:“white”}};
+const RANKS=[{r:1,c:“FRA”,n:“France”,pts:“1877.32”},{r:2,c:“ESP”,n:“Spain”,pts:“1876.40”},{r:3,c:“ARG”,n:“Argentina”,pts:“1874.81”},{r:4,c:“ENG”,n:“England”,pts:“1825.97”},{r:5,c:“POR”,n:“Portugal”,pts:“1763.83”},{r:6,c:“BEL”,n:“Belgium”,pts:“1742.11”},{r:7,c:“BRA”,n:“Brazil”,pts:“1733.56”},{r:8,c:“NED”,n:“Netherlands”,pts:“1721.30”}];
+const FLAGS={FRA:“🇫🇷”,ESP:“🇪🇸”,ARG:“🇦🇷”,ENG:“🏴󠁧󠁢󠁥󠁮󠁧󠁿”,POR:“🇵🇹”,BEL:“🇧🇪”,BRA:“🇧🇷”,NED:“🇳🇱”};
+const IMGS=[“https://images.unsplash.com/photo-1522778119026-d647f0596c20?w=900&q=80”,“https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=900&q=80”,“https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=900&q=80”,“https://images.unsplash.com/photo-1606925797300-0b35e9d1794e?w=900&q=80”];
+const STADIUMS=[“SoFi Stadium”,“MetLife Stadium”,“AT&T Stadium”,“BC Place”];
+const BGFB=[“linear-gradient(135deg,#002F6C,#00A3E0)”,“linear-gradient(135deg,#001a40,#003a82)”,“linear-gradient(135deg,#003a82,#005bb5)”,“linear-gradient(135deg,#00255c,#00A3E0)”];
+const PARTNERS=[“ARAMCO”,“ADIDAS”,“COCA-COLA”,“HYUNDAI|KIA”,“LENOVO”,“QATAR AIRWAYS”,“VISA”];
+const GIFTS=[{lb:“Amazon Gift Card”},{lb:“Apple Gift Card”},{lb:“Google Play Card”},{lb:“Xbox Gift Card”},{lb:“iTunes Card”}];
+
+const LS={get:(k)=>{try{return JSON.parse(localStorage.getItem(k));}catch{return null;}},set:(k,v)=>localStorage.setItem(k,JSON.stringify(v)),del:(k)=>localStorage.removeItem(k)};
+const uid=()=>Math.random().toString(36).slice(2,9).toUpperCase();
+const fmt=(d)=>new Date(d+“T12:00:00”).toLocaleDateString(“en-US”,{weekday:“short”,month:“short”,day:“numeric”,year:“numeric”});
+const p2=(n)=>String(n).padStart(2,“0”);
+const rSeat=()=>“Block “+(Math.floor(Math.random()*24)+1)+” Row “+String.fromCharCode(65+Math.floor(Math.random()*18))+” Seat “+(Math.floor(Math.random()*32)+1);
+
+function getSeller(email){
+let idx=0;for(let i=0;i<email.length;i++)idx+=email.charCodeAt(i);
+const s={…SELLERS[idx%SELLERS.length]};
+s.reviews=[];for(let i=0;i<4;i++)s.reviews.push(REVIEWS[(idx+i)%REVIEWS.length]);
+return s;
+}
+
+function useCountdown(tgt){
+const [c,set]=useState({d:0,h:0,m:0,s:0});
+useEffect(()=>{
+const tick=()=>{const diff=tgt-Date.now();if(diff>0)set({d:Math.floor(diff/864e5),h:Math.floor(diff%864e5/36e5),m:Math.floor(diff%36e5/6e4),s:Math.floor(diff%6e4/1e3)});};
+tick();const id=setInterval(tick,1000);return()=>clearInterval(id);
+},[tgt]);
+return c;
+}
+
+function QR({val,sz=80}){
+const cells=[];
+for(let i=0;i<7;i++)for(let j=0;j<7;j++){
+if((val.charCodeAt((i*7+j)%val.length)+i*13+j*19)%3===0)
+cells.push(<rect key={i+”-”+j} x={i*11+5} y={j*11+5} width=“9” height=“9” fill={B}/>);
+}
+return(<svg width={sz} height={sz} viewBox="0 0 88 88"><rect width="88" height="88" fill="white"/>{cells}<rect x="5" y="5" width="22" height="22" fill="none" stroke={B} strokeWidth="3"/><rect x="61" y="5" width="22" height="22" fill="none" stroke={B} strokeWidth="3"/><rect x="5" y="61" width="22" height="22" fill="none" stroke={B} strokeWidth="3"/><rect x="10" y="10" width="12" height="12" fill={B}/><rect x="66" y="10" width="12" height="12" fill={B}/><rect x="10" y="66" width="12" height="12" fill={B}/></svg>);
+}
+
+function Ticket({match,holder,seat,tid,locked}){
+const id=tid||uid(),lk=locked!==false,s=seat||(lk?“Contact Support”:rSeat());
+const mn=match.n||match.name||””,ms=match.s||match.stage||””,md=match.d||match.date||“2026-06-11”,mt=match.t||match.time||“19:00”,mv=(match.v||match.venue||””).split(”,”)[0];
+return(
+<div style={{background:“linear-gradient(135deg,”+B+” 0%,#00255c 45%,#003a82 100%)”,borderRadius:16,overflow:“hidden”,fontFamily:”‘Barlow Condensed’,sans-serif”,boxShadow:“0 12px 40px rgba(0,47,108,.55)”,width:“100%”,maxWidth:480,position:“relative”}}>
+<div style={{background:“linear-gradient(90deg,”+A+”,#fff,”+A+”)”,height:5}}/>
+<div style={{position:“absolute”,right:-10,top:8,fontSize:90,fontWeight:900,opacity:.04,color:“white”,pointerEvents:“none”,lineHeight:1}}>FIFA</div>
+<div style={{padding:“18px 20px 16px”}}>
+<div style={{display:“flex”,justifyContent:“space-between”,alignItems:“flex-start”,gap:14,marginBottom:14}}>
+<div style={{flex:1}}>
+<div style={{fontSize:9,letterSpacing:4,color:“rgba(255,255,255,.45)”,marginBottom:3}}>FIFA WORLD CUP 2026</div>
+<div style={{fontSize:9,letterSpacing:3,color:“rgba(255,255,255,.3)”,marginBottom:10}}>CANADA - MEXICO - USA</div>
+<div style={{fontSize:22,fontWeight:900,color:“white”,lineHeight:1.1,marginBottom:8}}>{mn}</div>
+<span style={{background:A,color:“white”,fontSize:9,fontWeight:700,letterSpacing:1.5,padding:“3px 10px”,borderRadius:20}}>{ms}</span>
+</div>
+<div style={{background:“white”,borderRadius:8,padding:6,flexShrink:0,position:“relative”}}>
+{lk&&<div style={{position:“absolute”,inset:0,background:“rgba(255,255,255,.92)”,borderRadius:8,display:“flex”,alignItems:“center”,justifyContent:“center”,flexDirection:“column”,gap:2,zIndex:2}}><div style={{fontSize:20}}>🔒</div><div style={{fontSize:7,color:B,fontWeight:700}}>LOCKED</div></div>}
+<QR val={“WC2026-”+id} sz={72}/>
+</div>
+</div>
+<div style={{display:“flex”,alignItems:“center”,margin:“10px 0”}}>
+<div style={{flex:1,borderTop:“2px dashed rgba(255,255,255,.15)”}}/>
+<div style={{margin:“0 8px”,color:“rgba(255,255,255,.2)”,fontSize:12}}>*</div>
+<div style={{flex:1,borderTop:“2px dashed rgba(255,255,255,.15)”}}/>
+</div>
+<div style={{display:“grid”,gridTemplateColumns:“1fr 1fr 1fr”,gap:“8px 12px”,background:“rgba(255,255,255,.06)”,borderRadius:10,padding:“12px 14px”,marginBottom:12}}>
+{[[“DATE”,fmt(md)],[“KICK-OFF”,mt+” LOCAL”],[“VENUE”,mv],[“SEAT”,s],[“CATEGORY”,“Cat. 1 - PREMIUM”],[“HOLDER”,holder||“Ticket Holder”]].map(([label,val])=>(
+<div key={label}><div style={{fontSize:7,color:“rgba(255,255,255,.35)”,letterSpacing:2,marginBottom:2}}>{label}</div><div style={{fontSize:11,fontWeight:700,color:val===“Contact Support”?“rgba(255,200,100,.7)”:“white”,lineHeight:1.25}}>{val}</div></div>
+))}
+</div>
+{lk&&<div style={{background:“rgba(245,158,11,.15)”,border:“1px solid rgba(245,158,11,.35)”,borderRadius:8,padding:“10px 12px”,marginBottom:10}}><div style={{fontSize:9,color:“rgba(255,200,80,.9)”,letterSpacing:2,fontWeight:700,marginBottom:3}}>CODE REQUIRED - CONTACT SUPPORT</div><div style={{fontSize:10,color:“rgba(255,220,120,.7)”,lineHeight:1.5}}>Contact support to activate and receive your seat details and QR code.</div></div>}
+<div style={{display:“flex”,justifyContent:“space-between”,alignItems:“center”,borderTop:“1px solid rgba(255,255,255,.08)”,paddingTop:8}}>
+<div style={{fontSize:8,color:“rgba(255,255,255,.25)”,letterSpacing:1}}>WC2026-{id}</div>
+<div style={{display:“flex”,gap:8}}>{[“ARAMCO”,“ADIDAS”,“VISA”,“QATAR”].map(p=><div key={p} style={{fontSize:6,color:“rgba(255,255,255,.25)”,letterSpacing:1.5,fontWeight:700}}>{p}</div>)}</div>
+</div>
+</div>
+<div style={{background:“linear-gradient(90deg,”+A+”,#fff,”+A+”)”,height:5}}/>
+</div>
+);
+}
+
+function Auth({onAuth}){
+const [mode,setMode]=useState(“login”);
+const [email,setEmail]=useState(””);
+const [pin,setPin]=useState(””);
+const [err,setErr]=useState(””);
+const [busy,setBusy]=useState(false);
+const [done,setDone]=useState(null);
+function go(){
+setErr(””);
+if(!email.includes(”@”))return setErr(“Please enter a valid email address.”);
+if(!/^\d{6}$/.test(pin))return setErr(“PIN must be exactly 6 digits.”);
+setBusy(true);
+setTimeout(()=>{
+const users=LS.get(“wc_u”)||{};
+if(mode===“signup”){
+if(users[email]){setBusy(false);return setErr(“Account already exists. Please log in.”);}
+users[email]=pin;LS.set(“wc_u”,users);LS.set(“wc_s”,email);setBusy(false);setDone({email,pin});
+}else{
+if(!users[email]){setBusy(false);return setErr(“No account found. Please sign up first.”);}
+if(users[email]!==pin){setBusy(false);return setErr(“Wrong PIN. Please try again.”);}
+LS.set(“wc_s”,email);onAuth(email);setBusy(false);
+}
+},500);
+}
+if(done)return(
+<div style={{minHeight:“100vh”,background:“linear-gradient(145deg,”+B+”,#001830)”,display:“flex”,alignItems:“center”,justifyContent:“center”,padding:20}}>
+<div style={{width:“100%”,maxWidth:400}}>
+<div style={{textAlign:“center”,color:“white”,marginBottom:24}}><div style={{fontSize:48,fontWeight:900,letterSpacing:4}}>FIFAResell</div><div style={{fontSize:13,color:A,letterSpacing:2}}>OFFICIAL MARKETPLACE</div></div>
+<div style={{background:“white”,borderRadius:20,padding:“32px 28px”,textAlign:“center”}}>
+<div style={{fontSize:48,marginBottom:12}}>🎉</div>
+<h2 style={{fontSize:22,fontWeight:900,color:B,marginBottom:8}}>Account Created!</h2>
+<p style={{fontSize:14,color:”#555”,marginBottom:20,lineHeight:1.6}}>Save your login details. Same email and PIN logs you in forever.</p>
+<div style={{background:”#f0f8ff”,border:“2px solid “+A,borderRadius:12,padding:“18px”,marginBottom:18,textAlign:“left”}}>
+<p style={{fontSize:10,fontWeight:700,color:”#888”,letterSpacing:1.5,marginBottom:10}}>YOUR LOGIN DETAILS - SAVE THESE NOW</p>
+<p style={{fontSize:11,color:”#aaa”,marginBottom:4}}>EMAIL</p>
+<p style={{fontSize:14,fontWeight:700,color:B,marginBottom:14,wordBreak:“break-all”}}>{done.email}</p>
+<p style={{fontSize:11,color:”#aaa”,marginBottom:6}}>YOUR PIN</p>
+<div style={{display:“flex”,gap:6}}>{done.pin.split(””).map((d,i)=><div key={i} style={{width:36,height:44,background:B,borderRadius:8,display:“flex”,alignItems:“center”,justifyContent:“center”,color:“white”,fontWeight:900,fontSize:19}}>{d}</div>)}</div>
+</div>
+<div style={{background:”#fff3e0”,borderRadius:10,padding:“12px 14px”,marginBottom:20,textAlign:“left”}}><p style={{fontSize:13,color:”#92400e”,lineHeight:1.6}}><strong>Important:</strong> Screenshot your PIN now. Forgot it means new email needed.</p></div>
+<button onClick={()=>onAuth(done.email)} style={{width:“100%”,padding:“14px”,background:A,color:“white”,border:“none”,borderRadius:9,fontWeight:900,fontSize:16,letterSpacing:2}}>ENTER THE MARKETPLACE</button>
+</div>
+</div>
+</div>
+);
+return(
+<div style={{minHeight:“100vh”,background:“linear-gradient(145deg,”+B+”,#001830)”,display:“flex”,alignItems:“center”,justifyContent:“center”,padding:20}}>
+<div style={{width:“100%”,maxWidth:400}}>
+<div style={{textAlign:“center”,color:“white”,marginBottom:28}}>
+<div style={{fontSize:52,fontWeight:900,letterSpacing:4,lineHeight:1}}>FIFAResell</div>
+<div style={{fontSize:14,color:A,letterSpacing:2,marginTop:6}}>OFFICIAL TICKET MARKETPLACE</div>
+<div style={{fontSize:10,opacity:.4,marginTop:6,letterSpacing:2}}>CONNECTING RESELLERS TO BUYERS WORLDWIDE</div>
+</div>
+<div style={{background:“white”,borderRadius:20,padding:“32px 28px”}}>
+<div style={{display:“flex”,borderRadius:9,overflow:“hidden”,border:“2px solid “+B,marginBottom:22}}>
+{[“login”,“signup”].map(m=><button key={m} onClick={()=>{setMode(m);setErr(””);}} style={{flex:1,padding:“12px”,background:mode===m?B:“white”,color:mode===m?“white”:B,border:“none”,fontWeight:700,fontSize:14,letterSpacing:1.5}}>{m===“login”?“LOG IN”:“SIGN UP”}</button>)}
+</div>
+{mode===“signup”&&<div style={{background:”#e8f4fd”,borderRadius:8,padding:“10px 14px”,marginBottom:16,fontSize:13,color:”#004a7a”,lineHeight:1.5}}>Sign up once. Same email and PIN logs you in forever.</div>}
+<label style={{fontSize:11,fontWeight:700,color:”#555”,letterSpacing:1.5,display:“block”,marginBottom:6}}>EMAIL ADDRESS</label>
+<input style={{width:“100%”,padding:“13px 15px”,border:“2px solid #d8e4f0”,borderRadius:8,fontSize:15,outline:“none”,marginBottom:16,display:“block”}} type=“email” value={email} onChange={e=>setEmail(e.target.value)} placeholder=“your@email.com”/>
+<label style={{fontSize:11,fontWeight:700,color:”#555”,letterSpacing:1.5,display:“block”,marginBottom:6}}>{mode===“signup”?“CHOOSE A 6-DIGIT PIN”:“YOUR 6-DIGIT PIN”}</label>
+<input style={{width:“100%”,padding:“13px 15px”,border:“2px solid #d8e4f0”,borderRadius:8,fontSize:22,letterSpacing:10,fontFamily:“monospace”,outline:“none”,marginBottom:6,display:“block”}} type=“password” inputMode=“numeric” maxLength={6} value={pin} onChange={e=>setPin(e.target.value.replace(/\D/g,””))} placeholder=”      “ onKeyDown={e=>e.key===“Enter”&&go()}/>
+<p style={{fontSize:11,color:”#bbb”,marginBottom:16}}>{mode===“signup”?“Pick any 6 numbers. Example: 482910”:“The 6-digit PIN you set when signing up.”}</p>
+{err&&<div style={{background:”#fde8e8”,color:”#c62828”,borderRadius:8,padding:“11px 14px”,fontSize:13,marginBottom:14,textAlign:“center”}}>{err}</div>}
+<button onClick={go} disabled={busy} style={{width:“100%”,padding:“14px”,background:busy?”#ccc”:A,color:“white”,border:“none”,borderRadius:9,fontWeight:900,fontSize:15,letterSpacing:2,marginBottom:14}}>{busy?“Please wait…”:mode===“login”?“SIGN IN”:“CREATE ACCOUNT”}</button>
+<p style={{textAlign:“center”,fontSize:13,color:”#aaa”}}>{mode===“login”?“No account? “:“Have one? “}<span onClick={()=>{setMode(mode===“login”?“signup”:“login”);setErr(””);}} style={{color:B,fontWeight:700,cursor:“pointer”}}>{mode===“login”?“Sign up here”:“Log in here”}</span></p>
+<div style={{background:”#f7fafd”,borderRadius:8,padding:“10px”,marginTop:14,textAlign:“center”}}><p style={{fontSize:11,color:”#aaa”}}>Account saved permanently. Same email + PIN works every time.</p></div>
+</div>
+</div>
+</div>
+);
+}
+
+function SellerProfile({seller,onClose}){
+return(
+<div style={{position:“fixed”,inset:0,background:“rgba(0,0,0,.85)”,zIndex:4000,display:“flex”,alignItems:“center”,justifyContent:“center”,padding:16}} onClick={e=>e.target===e.currentTarget&&onClose()}>
+<div style={{background:“white”,borderRadius:20,width:“100%”,maxWidth:420,maxHeight:“90vh”,overflowY:“auto”}}>
+<div style={{background:“linear-gradient(135deg,”+B+”,#003a82)”,borderRadius:“20px 20px 0 0”,padding:“22px 22px 26px”}}>
+<div style={{display:“flex”,justifyContent:“flex-end”,marginBottom:14}}><button onClick={onClose} style={{background:“rgba(255,255,255,.15)”,border:“none”,color:“white”,width:30,height:30,borderRadius:“50%”,fontSize:18}}>X</button></div>
+<div style={{display:“flex”,alignItems:“center”,gap:16}}>
+<div style={{width:62,height:62,background:A,borderRadius:“50%”,display:“flex”,alignItems:“center”,justifyContent:“center”,color:“white”,fontWeight:900,fontSize:20,flexShrink:0,border:“3px solid white”}}>{seller.av}</div>
+<div style={{color:“white”}}><div style={{fontWeight:900,fontSize:20}}>{seller.name}</div><div style={{fontSize:12,opacity:.7,marginBottom:6}}>{seller.loc}</div><div style={{background:G,borderRadius:20,padding:“3px 12px”,display:“inline-block”,fontSize:11,fontWeight:700,color:“white”}}>✓ VERIFIED SELLER</div></div>
+</div>
+<div style={{display:“flex”,gap:12,marginTop:18}}>
+{[[seller.sold+”+”,“Tickets Sold”],[“5.0 ★”,“Rating”],[“100%”,“Success Rate”]].map(([v,l])=>(
+<div key={l} style={{background:“rgba(255,255,255,.12)”,borderRadius:10,padding:“10px”,textAlign:“center”,flex:1}}><div style={{color:l===“Rating”?”#fbbf24”:“white”,fontWeight:900,fontSize:18}}>{v}</div><div style={{color:“rgba(255,255,255,.6)”,fontSize:10}}>{l}</div></div>
+))}
+</div>
+</div>
+<div style={{padding:“20px 22px”}}>
+<div style={{background:”#f0fdf4”,border:“1px solid #86efac”,borderRadius:10,padding:“12px 14px”,marginBottom:18}}><div style={{fontWeight:700,color:”#15803d”,fontSize:13,marginBottom:4}}>Escrow Protected</div><div style={{fontSize:12,color:”#166534”,lineHeight:1.5}}>All purchases supervised by our escrow agent. Payment only released after ticket confirmed.</div></div>
+<div style={{fontWeight:700,color:B,fontSize:14,marginBottom:4}}>Recent Reviews</div>
+<div style={{fontSize:11,color:”#888”,marginBottom:14}}>From verified buyers</div>
+{seller.reviews.map((rv,i)=>(
+<div key={i} style={{padding:“12px 0”,borderBottom:i<seller.reviews.length-1?“1px solid #f0f5fa”:“none”}}>
+<div style={{display:“flex”,justifyContent:“space-between”,marginBottom:4}}><div style={{fontWeight:700,fontSize:13}}>{rv.u}</div><div style={{color:”#fbbf24”,fontSize:12}}>★★★★★</div></div>
+<div style={{fontSize:11,color:”#888”,marginBottom:4}}>{rv.m}</div>
+<div style={{fontSize:13,color:”#555”,lineHeight:1.5}}>{rv.t}</div>
+</div>
+))}
+</div>
+</div>
+</div>
+);
+}
+
+function EscrowPrompt({matchName,seller,onYes,onNo}){
+return(
+<div style={{position:“fixed”,inset:0,background:“rgba(0,0,0,.88)”,zIndex:3500,display:“flex”,alignItems:“center”,justifyContent:“center”,padding:20}}>
+<div style={{background:“white”,borderRadius:20,width:“100%”,maxWidth:400,overflow:“hidden”}}>
+<div style={{background:“linear-gradient(135deg,”+B+”,#003a82)”,padding:“22px 24px”,textAlign:“center”}}>
+<div style={{fontSize:36,marginBottom:8}}>🛡️</div>
+<div style={{color:“white”,fontWeight:900,fontSize:18,marginBottom:4}}>Protected Purchase</div>
+<div style={{color:“rgba(255,255,255,.65)”,fontSize:12}}>FIFA Resell Escrow Service</div>
+</div>
+<div style={{padding:“22px 24px”}}>
+{matchName&&<div style={{background:”#f0f8ff”,border:“2px solid “+A,borderRadius:10,padding:“12px 14px”,marginBottom:16}}><div style={{fontSize:11,color:”#888”,marginBottom:4}}>YOU ARE ENQUIRING ABOUT</div><div style={{fontWeight:900,color:B,fontSize:16}}>{matchName}</div></div>}
+<p style={{fontSize:14,color:”#333”,lineHeight:1.7,marginBottom:14}}>Would you like to proceed directly with our verified reseller <strong>{seller.name}</strong>?</p>
+<div style={{background:”#f0fdf4”,border:“1px solid #86efac”,borderRadius:10,padding:“12px 14px”,marginBottom:18}}>
+<div style={{fontWeight:700,color:”#15803d”,fontSize:13,marginBottom:8}}>How our Escrow works:</div>
+{[“Our agent supervises the full transaction”,“Your payment is held safely until delivery”,“Ticket verified before funds are released”,“Full protection if anything goes wrong”].map((s,i)=><div key={i} style={{fontSize:12,color:”#166534”,marginBottom:3}}>✓ {s}</div>)}
+</div>
+<button onClick={onYes} style={{width:“100%”,padding:“14px”,background:G,color:“white”,border:“none”,borderRadius:10,fontWeight:900,fontSize:15,marginBottom:10}}>Yes, Connect Me to the Reseller</button>
+<button onClick={onNo} style={{width:“100%”,padding:“12px”,background:“white”,color:”#555”,border:“2px solid #e5e7eb”,borderRadius:10,fontWeight:700,fontSize:14}}>No thanks</button>
+</div>
+</div>
+</div>
+);
+}
+
+function ResellerChat({user,seller,matchName,isAdmin,targetUser,allChats,setAllChats,onClose,onSendTicket,onShowProfile}){
+const key=“rc_”+(isAdmin?targetUser:user);
+const defMsgs=[
+{from:“agent”,text:“Hi! I am Alex from FIFAResell, your escrow agent. I am here to make sure this transaction goes smoothly and your money is protected every step of the way.”,ts:Date.now()-5000},
+{from:“seller”,text:“Hey! “+seller.name+” here. Great choice on that match! I have tickets available. What section are you looking for? Let me check availability right now.”,ts:Date.now()-2000},
+];
+const msgs=(allChats[key]&&allChats[key].length>0)?allChats[key]:defMsgs;
+const [inp,setInp]=useState(””);
+const [img,setImg]=useState(null);
+const [role,setRole]=useState(“seller”);
+const fRef=useRef(),bRef=useRef();
+useEffect(()=>{bRef.current&&bRef.current.scrollIntoView({behavior:“smooth”});});
+function save(arr){setAllChats(prev=>{const n={…prev,[key]:arr};LS.set(“wc_ch”,n);return n;});}
+function send(){
+if(!inp.trim()&&!img)return;
+const from=isAdmin?role:“user”;
+const updated=[…msgs,{from,text:inp,img:img||null,ts:Date.now()}];
+save(updated);setInp(””);setImg(null);
+if(!isAdmin)setTimeout(()=>save([…updated,{from:“seller”,text:“Got that! Checking availability now and will get back to you shortly.”,ts:Date.now()}]),1300);
+}
+function bStyle(m){
+if(m.from===“user”)return{self:“flex-end”,bg:A,br:“18px 18px 4px 18px”,label:null};
+if(m.from===“agent”)return{self:“flex-start”,bg:”#1e3a5f”,br:“18px 18px 18px 4px”,label:“Alex - Escrow Agent”};
+return{self:“flex-start”,bg:B,br:“18px 18px 18px 4px”,label:seller.name+” (Verified Seller)”};
+}
+return(
+<div style={{position:“fixed”,inset:0,background:“rgba(0,0,0,.78)”,zIndex:2000,display:“flex”,alignItems:“flex-end”,justifyContent:“center”}} onClick={e=>e.target===e.currentTarget&&onClose()}>
+<div style={{background:“white”,width:“100%”,maxWidth:520,height:“92vh”,borderRadius:“20px 20px 0 0”,display:“flex”,flexDirection:“column”,overflow:“hidden”}}>
+<div style={{background:“linear-gradient(135deg,”+B+”,#003a82)”,color:“white”,padding:“14px 16px”,flexShrink:0}}>
+<div style={{display:“flex”,alignItems:“center”,justifyContent:“space-between”,marginBottom:10}}>
+<div style={{fontWeight:900,fontSize:12,letterSpacing:1,opacity:.8}}>FIFARESELL - PROTECTED TRANSACTION</div>
+<div style={{display:“flex”,gap:8,alignItems:“center”}}>
+{isAdmin&&onSendTicket&&<button onClick={()=>onSendTicket(targetUser)} style={{background:G,border:“none”,color:“white”,borderRadius:7,padding:“6px 12px”,fontWeight:700,fontSize:11}}>+ Send Ticket</button>}
+<button onClick={onClose} style={{background:“rgba(255,255,255,.15)”,border:“none”,color:“white”,width:30,height:30,borderRadius:“50%”,fontSize:18,display:“flex”,alignItems:“center”,justifyContent:“center”}}>X</button>
+</div>
+</div>
+<div style={{display:“flex”,gap:8}}>
+<div style={{background:“rgba(255,255,255,.1)”,borderRadius:10,padding:“8px 10px”,flex:1}}><div style={{fontSize:8,opacity:.6,letterSpacing:1,marginBottom:2}}>ESCROW AGENT</div><div style={{fontWeight:700,fontSize:12}}>Alex - FIFAResell</div><div style={{fontSize:9,color:G}}>● Online</div></div>
+<div onClick={onShowProfile} style={{background:“rgba(255,255,255,.1)”,borderRadius:10,padding:“8px 10px”,flex:1,cursor:“pointer”,border:“1px solid rgba(0,163,224,.5)”}}><div style={{fontSize:8,opacity:.6,letterSpacing:1,marginBottom:2}}>VERIFIED RESELLER</div><div style={{fontWeight:700,fontSize:12}}>{seller.name}</div><div style={{fontSize:9,color:”#fbbf24”}}>★★★★★ Tap for profile</div></div>
+{matchName&&<div style={{background:“rgba(255,255,255,.08)”,borderRadius:10,padding:“8px 10px”,flex:1}}><div style={{fontSize:8,opacity:.6,letterSpacing:1,marginBottom:2}}>ENQUIRY</div><div style={{fontWeight:700,fontSize:11}}>{matchName}</div><div style={{fontSize:9,color:A}}>Limited Availability</div></div>}
+</div>
+</div>
+{isAdmin&&(
+<div style={{background:”#f8f9fa”,borderBottom:“1px solid #e5e7eb”,padding:“8px 14px”,display:“flex”,gap:6,alignItems:“center”,flexShrink:0}}>
+<span style={{fontSize:11,color:”#888”,marginRight:4}}>Send as:</span>
+{[[“agent”,“Escrow Agent”],[“seller”,“Reseller (”+seller.name+”)”]].map(([r,l])=>(
+<button key={r} onClick={()=>setRole(r)} style={{padding:“5px 12px”,borderRadius:6,border:“2px solid “+B,background:role===r?B:“white”,color:role===r?“white”:B,fontWeight:700,fontSize:11}}>{l}</button>
+))}
+</div>
+)}
+<div style={{flex:1,overflowY:“auto”,padding:14,display:“flex”,flexDirection:“column”,gap:10,background:”#f0f5fb”}}>
+<div style={{background:”#fff9e6”,border:“1px solid #fcd34d”,borderRadius:8,padding:“10px 14px”,textAlign:“center”,marginBottom:4}}><div style={{fontSize:11,color:”#92400e”,fontWeight:700}}>🛡️ ESCROW PROTECTED CHAT</div><div style={{fontSize:11,color:”#78350f”}}>Your payment is held safely until ticket delivery is confirmed</div></div>
+{msgs.map((m,i)=>{
+const st=bStyle(m);
+return(
+<div key={i} style={{alignSelf:st.self,maxWidth:“83%”}}>
+{st.label&&<div style={{fontSize:10,color:”#888”,marginBottom:3,paddingLeft:4}}>{st.label}</div>}
+<div style={{background:st.bg,color:“white”,borderRadius:st.br,padding:“10px 14px”,fontSize:14,lineHeight:1.5}}>
+{m.text&&<div>{m.text}</div>}
+{m.img&&<img src={m.img} alt=”” style={{maxWidth:“100%”,borderRadius:8,marginTop:m.text?8:0,display:“block”}}/>}
+{m.ticket&&(
+<div style={{marginTop:10}}>
+<div style={{fontSize:9,opacity:.7,marginBottom:6,letterSpacing:1}}>TICKET SENT TO YOU</div>
+<Ticket match={{n:m.ticket.n,s:m.ticket.s,d:m.ticket.d,t:m.ticket.t,v:m.ticket.v}} holder={m.ticket.holder} seat={m.ticket.seat} tid={m.ticket.id} locked={true}/>
+<div style={{marginTop:10}}><div style={{fontSize:9,opacity:.7,marginBottom:6,letterSpacing:1}}>GIFT CARDS ONLY - ALL OTHER PAYMENTS PAUSED</div><div style={{display:“flex”,flexWrap:“wrap”,gap:6}}>{GIFTS.map(g=><div key={g.lb} style={{background:“rgba(255,255,255,.15)”,borderRadius:6,padding:“5px 8px”,display:“flex”,alignItems:“center”,gap:4}}><span style={{fontSize:12}}>🎁</span><span style={{fontSize:10,fontWeight:700}}>{g.lb}</span></div>)}</div></div>
+</div>
+)}
+</div>
+<div style={{fontSize:10,color:”#b0bec5”,marginTop:2,textAlign:m.from===“user”?“right”:“left”,padding:“0 4px”}}>{new Date(m.ts).toLocaleTimeString([],{hour:“2-digit”,minute:“2-digit”})}</div>
+</div>
+);
+})}
+<div ref={bRef}/>
+</div>
+{img&&<div style={{padding:“8px 14px”,borderTop:“1px solid #e0eaf5”,display:“flex”,alignItems:“center”,gap:10,background:”#f8fafd”,flexShrink:0}}><img src={img} alt=”” style={{height:50,borderRadius:8,objectFit:“cover”}}/><button onClick={()=>setImg(null)} style={{background:R,color:“white”,border:“none”,borderRadius:6,padding:“4px 10px”,fontSize:12}}>Remove</button></div>}
+<div style={{display:“flex”,padding:“10px 12px”,gap:8,borderTop:“1px solid #e0eaf5”,background:“white”,alignItems:“center”,flexShrink:0}}>
+<input ref={fRef} type=“file” accept=“image/*” style={{display:“none”}} onChange={e=>{const f=e.target.files[0];if(f){const r=new FileReader();r.onload=ev=>setImg(ev.target.result);r.readAsDataURL(f);}}}/>
+<button onClick={()=>fRef.current.click()} style={{background:”#e8f4fd”,border:“none”,borderRadius:8,width:38,height:38,fontSize:16,flexShrink:0}}>+</button>
+<input style={{flex:1,padding:“10px 14px”,border:“2px solid #d8e4f0”,borderRadius:20,fontSize:14,outline:“none”}} placeholder={isAdmin?“Type as “+role+”…”:“Type your message…”} value={inp} onChange={e=>setInp(e.target.value)} onKeyDown={e=>e.key===“Enter”&&send()}/>
+<button onClick={send} style={{background:A,border:“none”,color:“white”,borderRadius:8,width:38,height:38,fontSize:16,flexShrink:0,fontWeight:900}}>▶</button>
+</div>
+</div>
+</div>
+);
+}
+
+function SendTicket({toEmail:initEmail,matches,allChats,setAllChats,onClose,notify}){
+const [toEmail,setTo]=useState(initEmail||””);
+const [custom,setCustom]=useState(false);
+const [selMatch,setSel]=useState(null);
+const [cName,setCN]=useState(””),cDate=useState(“2026-06-15”),cTime=useState(“19:00”),cVenue=useState(””),cStage=useState(“Group Stage”);
+const [seat,setSeat]=useState(””),holder=useState(””),sent=useState(false),prev=useState(false);
+const [cD,setCD]=cDate,cT=cTime,cV=cVenue,cS=cStage;
+const [hl,setHl]=holder,snt=sent,setSnt=sent[1],pv=prev,setPv=prev[1];
+const fm=custom?{n:cName||“Custom Match”,s:cS,d:cD,t:cT,v:cV||“TBD”}:selMatch?{n:selMatch.n,s:selMatch.s,d:selMatch.d,t:selMatch.t,v:selMatch.v}:null;
+function doSend(){
+if(!fm)return notify(“Select or create a match first”,R);
+if(!toEmail.includes(”@”))return notify(“Enter a valid recipient email”,R);
+const tid=uid();
+const tk={id:tid,n:fm.n,s:fm.s,d:fm.d,t:fm.t,v:fm.v,seat:seat||rSeat(),holder:hl||toEmail,locked:true,sentTo:toEmail,sentAt:Date.now()};
+const allT=LS.get(“wc_t”)||[];allT.push(tk);LS.set(“wc_t”,allT);
+const key=“rc_”+toEmail;
+const current=LS.get(“wc_ch”)||{};
+const convo=current[key]||[{from:“agent”,text:“Hi! I am Alex from FIFAResell, your escrow agent.”,ts:Date.now()-3000}];
+convo.push({from:“seller”,text:“Your FIFA World Cup 2026 ticket is ready! See below. Reply to this message to activate your ticket and receive your seat details.”,ticket:tk,ts:Date.now()});
+current[key]=convo;LS.set(“wc_ch”,current);setAllChats(current);setSnt(true);
+notify(“Ticket sent to “+toEmail+” in their chat”,G);
+}
+if(snt)return(
+<div style={{position:“fixed”,inset:0,background:“rgba(0,0,0,.85)”,zIndex:3000,display:“flex”,alignItems:“center”,justifyContent:“center”,padding:16}}>
+<div style={{background:“white”,borderRadius:20,width:“100%”,maxWidth:480,padding:“40px 28px”,textAlign:“center”}}>
+<div style={{fontSize:56,marginBottom:16}}>✅</div>
+<h3 style={{fontSize:22,fontWeight:900,color:B,marginBottom:8}}>Ticket Sent!</h3>
+<p style={{fontSize:14,color:”#555”,marginBottom:18,lineHeight:1.6}}>Delivered into <strong>{toEmail}</strong> reseller chat.</p>
+<div style={{background:”#fff8e1”,border:“2px solid #fbbf24”,borderRadius:12,padding:“14px 18px”,marginBottom:20,textAlign:“left”}}><div style={{fontWeight:700,color:”#92400e”,fontSize:13,marginBottom:8}}>Gift Card Payment Only</div><div style={{display:“flex”,flexWrap:“wrap”,gap:8}}>{GIFTS.map(g=><div key={g.lb} style={{background:”#fef3c7”,borderRadius:8,padding:“7px 12px”,display:“flex”,alignItems:“center”,gap:6}}><span style={{fontSize:18}}>🎁</span><span style={{fontSize:12,fontWeight:700,color:”#92400e”}}>{g.lb}</span></div>)}</div></div>
+<button onClick={onClose} style={{background:A,color:“white”,border:“none”,borderRadius:8,padding:“12px 32px”,fontWeight:900,fontSize:15}}>Done</button>
+</div>
+</div>
+);
+return(
+<div style={{position:“fixed”,inset:0,background:“rgba(0,0,0,.85)”,zIndex:3000,display:“flex”,alignItems:“center”,justifyContent:“center”,padding:16}} onClick={e=>e.target===e.currentTarget&&onClose()}>
+<div style={{background:“white”,borderRadius:20,width:“100%”,maxWidth:520,maxHeight:“95vh”,overflowY:“auto”}}>
+<div style={{background:“linear-gradient(135deg,”+B+”,#003a82)”,borderRadius:“20px 20px 0 0”,padding:“18px 22px”,display:“flex”,justifyContent:“space-between”,alignItems:“center”}}>
+<div><div style={{color:“white”,fontWeight:900,fontSize:17}}>Send Ticket via Chat</div><div style={{color:“rgba(255,255,255,.6)”,fontSize:12,marginTop:2}}>Appears inside the reseller chat</div></div>
+<button onClick={onClose} style={{background:“rgba(255,255,255,.15)”,border:“none”,color:“white”,width:32,height:32,borderRadius:“50%”,fontSize:20,display:“flex”,alignItems:“center”,justifyContent:“center”}}>X</button>
+</div>
+<div style={{padding:“22px 24px”}}>
+<label style={{fontSize:10,fontWeight:700,color:”#888”,letterSpacing:1,display:“block”,marginBottom:5}}>RECIPIENT EMAIL</label>
+<input style={{width:“100%”,padding:“11px”,border:“2px solid #d8e4f0”,borderRadius:8,fontSize:14,outline:“none”,marginBottom:16,display:“block”}} value={toEmail} onChange={e=>setTo(e.target.value)} placeholder=“customer@email.com”/>
+<div style={{display:“flex”,borderRadius:8,overflow:“hidden”,border:“2px solid “+B,marginBottom:16}}>
+<button onClick={()=>setCustom(false)} style={{flex:1,padding:“10px”,background:!custom?B:“white”,color:!custom?“white”:B,border:“none”,fontWeight:700,fontSize:12}}>Choose Match</button>
+<button onClick={()=>setCustom(true)} style={{flex:1,padding:“10px”,background:custom?B:“white”,color:custom?“white”:B,border:“none”,fontWeight:700,fontSize:12}}>Type Custom</button>
+</div>
+{!custom&&<div style={{marginBottom:14}}><label style={{fontSize:10,fontWeight:700,color:”#888”,letterSpacing:1,display:“block”,marginBottom:5}}>SELECT MATCH</label><select style={{width:“100%”,padding:“12px”,border:“2px solid #d8e4f0”,borderRadius:8,fontSize:14,outline:“none”,display:“block”}} value={selMatch?selMatch.id:””} onChange={e=>setSel(matches.find(x=>x.id===+e.target.value)||null)}><option value="">Choose a match…</option>{matches.map(m=><option key={m.id} value={m.id}>{m.n} - {fmt(m.d)}</option>)}</select></div>}
+{custom&&<div style={{marginBottom:14}}>
+<label style={{fontSize:10,fontWeight:700,color:”#888”,letterSpacing:1,display:“block”,marginBottom:4}}>MATCH NAME</label><input style={{width:“100%”,padding:“10px”,border:“2px solid #d8e4f0”,borderRadius:8,fontSize:13,outline:“none”,marginBottom:10,display:“block”}} placeholder=“e.g. Brazil vs France” value={cName} onChange={e=>setCN(e.target.value)}/>
+<div style={{display:“grid”,gridTemplateColumns:“1fr 1fr”,gap:10}}>
+<div><label style={{fontSize:10,fontWeight:700,color:”#888”,letterSpacing:1,display:“block”,marginBottom:4}}>DATE</label><input style={{width:“100%”,padding:“10px”,border:“2px solid #d8e4f0”,borderRadius:8,fontSize:13,outline:“none”,display:“block”}} type=“date” value={cD} onChange={e=>setCD(e.target.value)}/></div>
+<div><label style={{fontSize:10,fontWeight:700,color:”#888”,letterSpacing:1,display:“block”,marginBottom:4}}>KICK-OFF</label><input style={{width:“100%”,padding:“10px”,border:“2px solid #d8e4f0”,borderRadius:8,fontSize:13,outline:“none”,display:“block”}} type=“time” value={cT} onChange={e=>cTime[1](e.target.value)}/></div>
+</div>
+<label style={{fontSize:10,fontWeight:700,color:”#888”,letterSpacing:1,display:“block”,marginBottom:4,marginTop:10}}>VENUE</label><input style={{width:“100%”,padding:“10px”,border:“2px solid #d8e4f0”,borderRadius:8,fontSize:13,outline:“none”,marginBottom:10,display:“block”}} placeholder=“Stadium, City” value={cV} onChange={e=>cVenue[1](e.target.value)}/>
+<label style={{fontSize:10,fontWeight:700,color:”#888”,letterSpacing:1,display:“block”,marginBottom:4}}>STAGE</label><select style={{width:“100%”,padding:“10px”,border:“2px solid #d8e4f0”,borderRadius:8,fontSize:13,outline:“none”,display:“block”}} value={cS} onChange={e=>cStage[1](e.target.value)}>{[“Group Stage”,“Round of 16”,“Quarter-Final”,“Semi-Final”,“Final”].map(s=><option key={s}>{s}</option>)}</select>
+</div>}
+<label style={{fontSize:10,fontWeight:700,color:”#888”,letterSpacing:1,display:“block”,marginBottom:4,marginTop:10}}>SEAT (blank = random)</label><input style={{width:“100%”,padding:“10px”,border:“2px solid #d8e4f0”,borderRadius:8,fontSize:13,outline:“none”,marginBottom:10,display:“block”}} placeholder=“Block 12 Row F Seat 7” value={seat} onChange={e=>setSeat(e.target.value)}/>
+<label style={{fontSize:10,fontWeight:700,color:”#888”,letterSpacing:1,display:“block”,marginBottom:4}}>HOLDER NAME</label><input style={{width:“100%”,padding:“10px”,border:“2px solid #d8e4f0”,borderRadius:8,fontSize:13,outline:“none”,marginBottom:16,display:“block”}} placeholder=“Customer full name” value={hl} onChange={e=>setHl(e.target.value)}/>
+<div style={{background:”#fff8e1”,border:“2px solid #fbbf24”,borderRadius:10,padding:“12px 14px”,marginBottom:16}}><div style={{fontWeight:700,color:”#92400e”,fontSize:12,marginBottom:4}}>Ticket shows: Code Required - Contact Support</div><p style={{fontSize:11,color:”#78350f”,lineHeight:1.5}}>QR and seat locked until they contact you.</p></div>
+<div style={{display:“flex”,flexDirection:“column”,gap:10}}>
+<button onClick={()=>{if(!fm)return notify(“Select a match first”,R);setPv(!pv);}} style={{padding:“11px”,background:“white”,color:B,border:“2px solid “+B,borderRadius:8,fontWeight:700,fontSize:13}}>{pv?“Hide Preview”:“Preview Ticket”}</button>
+<button onClick={doSend} style={{padding:“13px”,background:G,color:“white”,border:“none”,borderRadius:8,fontWeight:900,fontSize:14}}>SEND TICKET IN CHAT</button>
+</div>
+{pv&&fm&&<div style={{marginTop:16}}><Ticket match={fm} holder={hl||toEmail} seat="Contact Support" tid={uid()} locked={true}/></div>}
+</div>
+</div>
+</div>
+);
+}
+
+function Admin({user,allChats,setAllChats,matches,setMatches,openChat,onSendTicket,notify}){
+const [tab,setTab]=useState(“customers”);
+const [srch,setSrch]=useState(””);
+const [gm,setGm]=useState(null),ge=useState(””),gs=useState(””),pop=useState(null);
+const [geV,setGe]=ge,gsV=gs[0],setGs=gs[1],popV=pop[0],setPop=pop[1];
+const users=LS.get(“wc_u”)||{};
+const newC=Object.values(allChats).filter(m=>m&&m.length>0&&m[m.length-1].from===“user”).length;
+const filt=matches.filter(m=>m.n.toLowerCase().includes(srch.toLowerCase())||m.v.toLowerCase().includes(srch.toLowerCase()));
+const TABS=[{k:“customers”,l:“Customers (”+Object.keys(users).length+”)”},{k:“messages”,l:“Messages”+(newC>0?” (”+newC+” new)”:””)},{k:“matches”,l:“Matches”},{k:“generate”,l:“Generate”},{k:“guide”,l:“Setup Guide”}];
+return(
+<div style={{maxWidth:980,margin:“0 auto”,padding:“22px 14px”}}>
+<div style={{background:“linear-gradient(135deg,”+B+”,#003a82)”,borderRadius:14,padding:“20px 22px”,marginBottom:22,color:“white”}}>
+<h2 style={{fontSize:22,fontWeight:900,letterSpacing:2,marginBottom:4}}>Admin Dashboard</h2>
+<p style={{fontSize:13,opacity:.7}}>Signed in as <strong>{user}</strong></p>
+<div style={{display:“flex”,gap:12,marginTop:14,flexWrap:“wrap”}}>
+{[[Object.keys(users).length+” Customers”],[newC+” Unread”],[matches.length+” Matches”]].map(([v],i)=>(
+<div key={i} style={{background:“rgba(255,255,255,.12)”,borderRadius:10,padding:“10px 16px”}}><div style={{color:“white”,fontWeight:900,fontSize:17}}>{v}</div></div>
+))}
+</div>
+</div>
+<div style={{display:“flex”,flexWrap:“wrap”,gap:8,marginBottom:20}}>
+{TABS.map(({k,l})=><button key={k} onClick={()=>setTab(k)} style={{padding:“10px 16px”,borderRadius:8,border:“2px solid “+B,background:tab===k?B:“white”,color:tab===k?“white”:B,fontWeight:700,fontSize:12}}>{l}</button>)}
+</div>
+{tab===“customers”&&(
+<div style={{background:“white”,borderRadius:14,padding:22,boxShadow:“0 2px 16px rgba(0,47,108,.08)”}}>
+<h3 style={{fontSize:16,fontWeight:900,color:B,marginBottom:16}}>All Registered Customers</h3>
+{Object.keys(users).length===0?<p style={{color:”#bbb”,padding:“20px 0”,textAlign:“center”}}>No customers yet.</p>:Object.keys(users).map(email=>{
+const key=“rc_”+email,cms=allChats[key]||[],hasNew=cms.length>0&&cms[cms.length-1].from===“user”;
+return(<div key={email} style={{padding:“14px 0”,borderBottom:“1px solid #f0f5fa”}}>
+<div style={{display:“flex”,justifyContent:“space-between”,flexWrap:“wrap”,gap:10,alignItems:“center”}}>
+<div><div style={{display:“flex”,alignItems:“center”,gap:8,flexWrap:“wrap”,marginBottom:4}}><span style={{width:9,height:9,borderRadius:“50%”,background:hasNew?G:”#ddd”,display:“inline-block”}}/><strong style={{fontSize:14}}>{email}</strong>{hasNew&&<span style={{background:G,color:“white”,fontSize:10,fontWeight:700,padding:“2px 8px”,borderRadius:20}}>NEW</span>}</div><p style={{fontSize:12,color:”#bbb”,paddingLeft:18}}>{cms.length} message{cms.length!==1?“s”:””}</p></div>
+<div style={{display:“flex”,gap:8}}>
+<button onClick={()=>openChat(email)} style={{background:A,color:“white”,border:“none”,borderRadius:7,padding:“8px 14px”,fontWeight:700,fontSize:12}}>Chat</button>
+<button onClick={()=>onSendTicket(email)} style={{background:G,color:“white”,border:“none”,borderRadius:7,padding:“8px 14px”,fontWeight:700,fontSize:12}}>Send Ticket</button>
+</div>
+</div>
+</div>);
+})}
+</div>
+)}
+{tab===“messages”&&(
+<div style={{background:“white”,borderRadius:14,padding:22,boxShadow:“0 2px 16px rgba(0,47,108,.08)”}}>
+<h3 style={{fontSize:16,fontWeight:900,color:B,marginBottom:16}}>All Conversations</h3>
+{Object.entries(allChats).filter(([,m])=>m&&m.length>0).length===0?<p style={{color:”#bbb”,padding:“20px 0”,textAlign:“center”}}>No messages yet.</p>:Object.entries(allChats).filter(([,m])=>m&&m.length>0).map(([key,msgs])=>{
+const email=key.replace(“rc_”,””),last=msgs[msgs.length-1],nr=last.from===“user”;
+return(<div key={key} style={{padding:“12px 0”,borderBottom:“1px solid #f0f5fa”}}>
+<div style={{display:“flex”,justifyContent:“space-between”,flexWrap:“wrap”,gap:8,marginBottom:8,alignItems:“center”}}>
+<div style={{display:“flex”,alignItems:“center”,gap:8}}><span style={{width:9,height:9,borderRadius:“50%”,background:nr?R:”#ccc”,display:“inline-block”}}/><strong style={{fontSize:14}}>{email}</strong>{nr&&<span style={{background:R,color:“white”,fontSize:10,fontWeight:700,padding:“2px 8px”,borderRadius:20}}>NEEDS REPLY</span>}</div>
+<div style={{display:“flex”,gap:8}}>
+<button onClick={()=>openChat(email)} style={{background:A,color:“white”,border:“none”,borderRadius:7,padding:“8px 12px”,fontWeight:700,fontSize:12}}>Open Chat</button>
+<button onClick={()=>onSendTicket(email)} style={{background:G,color:“white”,border:“none”,borderRadius:7,padding:“8px 12px”,fontWeight:700,fontSize:12}}>Send Ticket</button>
+</div>
+</div>
+{msgs.slice(-2).map((m,i)=><p key={i} style={{fontSize:12,color:m.from===“user”?”#333”:”#888”,paddingLeft:18,marginBottom:2}}><strong>{m.from===“user”?“Customer”:m.from===“agent”?“Agent”:“Reseller”}:</strong> {m.ticket?”[ticket sent]”:m.img?”[image]”:m.text}</p>)}
+</div>);
+})}
+</div>
+)}
+{tab===“matches”&&(
+<div style={{background:“white”,borderRadius:14,padding:22,boxShadow:“0 2px 16px rgba(0,47,108,.08)”}}>
+<h3 style={{fontSize:16,fontWeight:900,color:B,marginBottom:14}}>Edit Match Prices</h3>
+<input style={{width:“100%”,padding:“11px”,border:“2px solid #d8e4f0”,borderRadius:8,fontSize:14,outline:“none”,marginBottom:16,display:“block”}} placeholder=“Search…” value={srch} onChange={e=>setSrch(e.target.value)}/>
+{filt.map(m=>(<div key={m.id} style={{padding:“12px 0”,borderBottom:“1px solid #f0f5fa”}}>
+<p style={{fontWeight:700,color:B,fontSize:14,marginBottom:10}}>{m.n} - {fmt(m.d)}</p>
+<div style={{display:“flex”,gap:10,flexWrap:“wrap”,alignItems:“flex-end”}}>
+<div><label style={{fontSize:10,color:”#999”,display:“block”,marginBottom:4,letterSpacing:1,fontWeight:700}}>PRICE ($)</label><input style={{padding:“9px”,border:“2px solid #d8e4f0”,borderRadius:8,fontSize:14,width:100,outline:“none”}} type=“number” value={m.p} onChange={e=>setMatches(p=>p.map(x=>x.id===m.id?{…x,p:+e.target.value}:x))}/></div>
+<button onClick={()=>notify(“Saved: “+m.n,G)} style={{background:G,color:“white”,border:“none”,borderRadius:7,padding:“10px 16px”,fontWeight:700,fontSize:12}}>Save</button>
+<button onClick={()=>onSendTicket(null)} style={{background:B,color:“white”,border:“none”,borderRadius:7,padding:“10px 16px”,fontWeight:700,fontSize:12}}>Send Ticket</button>
+</div>
+</div>))}
+</div>
+)}
+{tab===“generate”&&(
+<div style={{display:“grid”,gridTemplateColumns:“repeat(auto-fit,minmax(270px,1fr))”,gap:18,alignItems:“start”}}>
+<div style={{background:“white”,borderRadius:14,padding:22,boxShadow:“0 2px 16px rgba(0,47,108,.08)”}}>
+<h3 style={{fontSize:16,fontWeight:900,color:B,marginBottom:18}}>Generate Ticket Preview</h3>
+<label style={{fontSize:10,color:”#999”,display:“block”,marginBottom:5,letterSpacing:1,fontWeight:700}}>MATCH</label>
+<select style={{width:“100%”,padding:“11px”,border:“2px solid #d8e4f0”,borderRadius:8,fontSize:13,outline:“none”,marginBottom:14,display:“block”}} value={gm?gm.id:””} onChange={e=>setGm(matches.find(x=>x.id===+e.target.value)||null)}><option value="">Choose a match…</option>{matches.map(m=><option key={m.id} value={m.id}>{m.n}</option>)}</select>
+<label style={{fontSize:10,color:”#999”,display:“block”,marginBottom:5,letterSpacing:1,fontWeight:700}}>HOLDER NAME</label>
+<input style={{width:“100%”,padding:“11px”,border:“2px solid #d8e4f0”,borderRadius:8,fontSize:13,outline:“none”,marginBottom:14,display:“block”}} placeholder=“Name or email” value={geV} onChange={e=>setGe(e.target.value)}/>
+<label style={{fontSize:10,color:”#999”,display:“block”,marginBottom:5,letterSpacing:1,fontWeight:700}}>SEAT</label>
+<input style={{width:“100%”,padding:“11px”,border:“2px solid #d8e4f0”,borderRadius:8,fontSize:13,outline:“none”,marginBottom:20,display:“block”}} placeholder=“Block 5 Row G Seat 12” value={gsV} onChange={e=>setGs(e.target.value)}/>
+<button onClick={()=>{if(!gm)return notify(“Select a match”,R);setPop({match:gm,holder:geV,seat:gsV});}} style={{width:“100%”,padding:“13px”,background:A,color:“white”,border:“none”,borderRadius:8,fontWeight:900,fontSize:14,marginBottom:8}}>View Ticket</button>
+<button onClick={()=>onSendTicket(geV||null)} style={{width:“100%”,padding:“13px”,background:G,color:“white”,border:“none”,borderRadius:8,fontWeight:700,fontSize:13}}>Send to Customer</button>
+</div>
+<div>
+<p style={{fontWeight:900,fontSize:13,color:B,marginBottom:12}}>LIVE PREVIEW</p>
+{gm?<Ticket match={gm} holder={geV||“Customer”} seat={gsV||rSeat()} tid={uid()}/>:<div style={{background:“white”,borderRadius:14,padding:“50px 20px”,textAlign:“center”,color:”#ccc”}}><div style={{fontSize:50,marginBottom:10}}>🎟</div><p>Select a match to preview</p></div>}
+</div>
+</div>
+)}
+{tab===“guide”&&(
+<div style={{display:“flex”,flexDirection:“column”,gap:12}}>
+<div style={{background:“white”,borderRadius:14,padding:20}}>
+<h3 style={{fontSize:16,fontWeight:900,color:B,marginBottom:12}}>How to Add Your Domain</h3>
+{[[“Step 1 - Upload to Netlify (FREE)”,“Go to netlify.com on your computer. Sign up free. Drag and drop the fifa2026.html file into the Netlify dashboard. Your site goes live instantly at a URL like random-name.netlify.app”],[“Step 2 - Buy a domain”,“Go to namecheap.com. Search for a name like fifa2026tickets.com. Buy it for about $12 per year.”],[“Step 3 - Connect your domain to Netlify”,“In Netlify dashboard click Site Settings then Domain Management then Add Custom Domain. Type your domain name. Netlify shows you exactly what DNS records to add on Namecheap. Takes about 15 minutes to go live.”],[“That is it!”,“Your site will be live at your custom domain with HTTPS security included free. Total cost is about $12 per year for the domain. Netlify hosting is completely free.”]].map(([t,d],i)=>(
+<div key={i} style={{background:”#f7fafd”,borderRadius:10,padding:“12px 14px”,marginBottom:10,borderLeft:“4px solid “+A}}>
+<p style={{fontWeight:700,color:B,fontSize:14,marginBottom:4}}>{t}</p>
+<p style={{fontSize:13,color:”#555”,lineHeight:1.65}}>{d}</p>
+</div>
+))}
+</div>
+</div>
+)}
+{popV&&(
+<div style={{position:“fixed”,inset:0,background:“rgba(0,0,0,.92)”,zIndex:9999,display:“flex”,flexDirection:“column”,alignItems:“center”,justifyContent:“center”,padding:20,gap:20,overflowY:“auto”}} onClick={e=>e.target===e.currentTarget&&setPop(null)}>
+<div style={{color:“rgba(255,255,255,.5)”,fontSize:11,letterSpacing:3}}>TICKET PREVIEW</div>
+<Ticket match={popV.match} holder={popV.holder} seat={popV.seat} tid={uid()}/>
+<button onClick={()=>setPop(null)} style={{background:“rgba(255,255,255,.15)”,color:“white”,border:“1px solid rgba(255,255,255,.3)”,borderRadius:8,padding:“12px 28px”,fontWeight:700,fontSize:14}}>Close</button>
+</div>
+)}
+</div>
+);
+}
+
+function App(){
+const [user,setUser]=useState(null);
+const [page,setPage]=useState(“home”);
+const [allChats,setAllChats]=useState({});
+const [matches,setMatches]=useState(MATCHES);
+const [tickets,setTickets]=useState([]);
+const [heroIdx,setHeroIdx]=useState(0);
+const [srch,setSrch]=useState(””);
+const [toast,setToast]=useState(null);
+const [imgErr,setImgErr]=useState({});
+const [escrow,setEscrow]=useState(null);
+const [rchat,setRchat]=useState(null);
+const [sellerPop,setSellerPop]=useState(false);
+const [sendFor,setSendFor]=useState(null);
+const cd=useCountdown(WC);
+
+useEffect(()=>{
+const s=LS.get(“wc_s”);if(s)setUser(s);
+setTickets(LS.get(“wc_t”)||[]);
+setAllChats(LS.get(“wc_ch”)||{});
+},[]);
+useEffect(()=>{const id=setInterval(()=>setHeroIdx(p=>(p+1)%IMGS.length),5000);return()=>clearInterval(id);},[]);
+useEffect(()=>{if(page===“mytickets”)setTickets(LS.get(“wc_t”)||[]);},[page]);
+
+const isAdmin=user&&(user.toLowerCase().includes(“admin”)||user===ADM);
+const seller=user?getSeller(user):SELLERS[0];
+const myTickets=tickets.filter(t=>t.sentTo===user||t.holder===user);
+const newMsgs=Object.values(allChats).filter(m=>m&&m.length>0&&m[m.length-1].from===“user”).length;
+
+function notify(msg,color){setToast({msg,color:color||G});setTimeout(()=>setToast(null),4000);}
+function logout(){LS.del(“wc_s”);setUser(null);setPage(“home”);}
+function updateChats(fn){setAllChats(prev=>{const n=typeof fn===“function”?fn(prev):fn;LS.set(“wc_ch”,n);return n;});}
+function enquire(mn){setEscrow(mn||“FIFA 2026 Tickets”);}
+
+const filteredStore=matches.filter(m=>{const q=srch.toLowerCase();return m.n.toLowerCase().includes(q)||m.v.toLowerCase().includes(q)||m.d.includes(q)||m.s.toLowerCase().includes(q);});
+const NAV=[{pg:“home”,l:“Home”},{pg:“store”,l:“Tickets”},{pg:“mytickets”,l:“My Tickets”},{pg:“about”,l:“About”}];
+
+if(!user)return <Auth onAuth={e=>setUser(e)}/>;
+return(
+<div style={{fontFamily:”‘Barlow Condensed’,‘Segoe UI’,sans-serif”,minHeight:“100vh”,background:”#edf2f9”}}>
+<div className="ball">⚽</div>
+<div style={{background:“linear-gradient(90deg,#92400e,#b45309,#92400e)”,color:“white”,padding:“9px 16px”,textAlign:“center”,fontSize:12,fontWeight:700,position:“relative”,zIndex:600}}>
+⚠️ ALL PAYMENT METHODS TEMPORARILY PAUSED DUE TO HIGH TRANSACTION VOLUME. <span style={{color:”#fde68a”}}>ONLY GIFT CARDS ACCEPTED NOW. 🎁</span> Thank you for understanding.
+</div>
+{toast&&<div style={{position:“fixed”,top:72,right:16,zIndex:9997,background:toast.color,color:“white”,padding:“12px 20px”,borderRadius:10,fontWeight:700,fontSize:14,maxWidth:300}}>{toast.msg}</div>}
+<nav style={{background:B,position:“sticky”,top:0,zIndex:500,boxShadow:“0 2px 20px rgba(0,0,0,.4)”}}>
+<div style={{maxWidth:1200,margin:“0 auto”,padding:“0 16px”,height:54,display:“flex”,alignItems:“center”,justifyContent:“space-between”,gap:10}}>
+<button onClick={()=>setPage(“home”)} style={{background:“none”,border:“none”,padding:0,textAlign:“left”}}>
+<div style={{color:“white”,fontSize:19,fontWeight:900,letterSpacing:3,lineHeight:1}}>FIFAResell</div>
+<div style={{color:A,fontSize:8,letterSpacing:2}}>OFFICIAL MARKETPLACE</div>
+</button>
+<div style={{display:“flex”,alignItems:“center”,gap:6}}>
+<button onClick={()=>enquire(null)} style={{background:“rgba(255,255,255,.12)”,color:“white”,border:“1px solid rgba(255,255,255,.25)”,borderRadius:7,padding:“7px 12px”,fontWeight:700,fontSize:11}}>Support</button>
+<button onClick={logout} style={{background:R,color:“white”,border:“none”,borderRadius:7,padding:“7px 12px”,fontWeight:700,fontSize:11}}>Log Out</button>
+</div>
+</div>
+<div style={{borderTop:“1px solid rgba(255,255,255,.1)”,padding:“7px 12px”,display:“flex”,gap:6,overflowX:“auto”,WebkitOverflowScrolling:“touch”}}>
+{NAV.map(({pg,l})=><button key={pg} onClick={()=>setPage(pg)} style={{background:page===pg?A:“rgba(255,255,255,.1)”,color:“white”,border:“none”,borderRadius:20,padding:“6px 14px”,fontWeight:700,fontSize:12,whiteSpace:“nowrap”,flexShrink:0}}>{l}</button>)}
+{isAdmin&&<button onClick={()=>setPage(“admin”)} style={{background:page===“admin”?A:“rgba(0,163,224,.3)”,color:“white”,border:“1px solid “+A,borderRadius:20,padding:“6px 14px”,fontWeight:700,fontSize:12,whiteSpace:“nowrap”,flexShrink:0,display:“flex”,alignItems:“center”,gap:5}}>Admin{newMsgs>0&&<span style={{background:R,borderRadius:“50%”,width:17,height:17,display:“inline-flex”,alignItems:“center”,justifyContent:“center”,fontSize:10,fontWeight:900}}>{newMsgs}</span>}</button>}
+</div>
+</nav>
+<div style={{background:A,padding:“8px 18px”,display:“flex”,alignItems:“center”,justifyContent:“space-between”,flexWrap:“wrap”,gap:8}}>
+<span style={{color:“white”,fontSize:10,fontWeight:700,letterSpacing:2}}>FIFA WORLD CUP 2026 KICKS OFF IN</span>
+<div style={{display:“flex”,gap:14}}>{[[“DAYS”,cd.d],[“HOURS”,cd.h],[“MINS”,cd.m],[“SECS”,cd.s]].map(([l,v])=><div key={l} style={{textAlign:“center”,color:“white”}}><div style={{fontSize:24,fontWeight:900,lineHeight:1}}>{p2(v)}</div><div style={{fontSize:8,letterSpacing:2,opacity:.8}}>{l}</div></div>)}</div>
+</div>
+
+```
+  {page==="home"&&(
+    <div className="fi">
+      <div style={{position:"relative",height:440,overflow:"hidden",background:BGFB[heroIdx]}}>
+        <img src={IMGS[heroIdx]} alt="" style={{width:"100%",height:"100%",objectFit:"cover",filter:"brightness(.38)",display:imgErr[heroIdx]?"none":"block"}} onError={()=>setImgErr(p=>({...p,[heroIdx]:true}))}/>
+        {imgErr[heroIdx]&&<div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",opacity:.06}}><div style={{fontSize:160,lineHeight:1}}>⚽</div></div>}
+        <div style={{position:"absolute",inset:0,background:"linear-gradient(to bottom,rgba(0,47,108,.55),rgba(0,20,40,.9))"}}/>
+        <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",textAlign:"center",color:"white",padding:"0 20px"}}>
+          <p style={{fontSize:10,letterSpacing:5,opacity:.55,marginBottom:8}}>OFFICIAL RESELLER MARKETPLACE</p>
+          <h1 style={{fontSize:"clamp(26px,7vw,60px)",fontWeight:900,letterSpacing:4,lineHeight:1,marginBottom:10}}>FIFA WORLD CUP 2026</h1>
+          <p style={{fontSize:13,opacity:.65,letterSpacing:2,marginBottom:6}}>CANADA - MEXICO - USA</p>
+          <p style={{fontSize:12,opacity:.7,marginBottom:24,maxWidth:440,lineHeight:1.6}}>Buy directly from verified resellers with full escrow protection.</p>
+          <div style={{display:"flex",gap:12,flexWrap:"wrap",justifyContent:"center"}}>
+            <button onClick={()=>setPage("store")} style={{background:A,color:"white",border:"none",borderRadius:28,padding:"13px 32px",fontWeight:900,fontSize:13,letterSpacing:2}}>BROWSE TICKETS</button>
+            <button onClick={()=>enquire(null)} style={{background:"rgba(255,255,255,.15)",color:"white",border:"2px solid rgba(255,255,255,.35)",borderRadius:28,padding:"13px 24px",fontWeight:700,fontSize:13}}>Contact Reseller</button>
+          </div>
+        </div>
+        <div style={{position:"absolute",bottom:12,left:"50%",transform:"translateX(-50%)",display:"flex",gap:7}}>{IMGS.map((_,i)=><div key={i} onClick={()=>setHeroIdx(i)} style={{width:i===heroIdx?22:7,height:7,borderRadius:4,background:i===heroIdx?"white":"rgba(255,255,255,.3)",cursor:"pointer"}}/>)}</div>
+      </div>
+      <div style={{background:B,padding:"14px 20px",display:"flex",justifyContent:"center",gap:"clamp(14px,4vw,50px)",flexWrap:"wrap"}}>
+        {[["✅","Verified Resellers"],["🛡️","Escrow Protected"],["⚡","Instant Delivery"],["🎟","100% Authentic"]].map(([ic,l])=><div key={l} style={{display:"flex",alignItems:"center",gap:6,color:"white"}}><span style={{fontSize:14}}>{ic}</span><span style={{fontSize:11,fontWeight:700,opacity:.85}}>{l}</span></div>)}
+      </div>
+      <div style={{maxWidth:1040,margin:"0 auto",padding:"26px 14px"}}>
+        <h2 style={{fontSize:19,fontWeight:900,color:B,letterSpacing:2,borderBottom:"3px solid "+A,paddingBottom:7,marginBottom:16}}>HOW IT WORKS</h2>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:12,marginBottom:32}}>
+          {[["1","Browse Tickets","Browse all FIFA 2026 match tickets."],["2","Escrow Connection","Our agent connects you to a verified seller safely."],["3","Gift Card Payment","Pay with gift card only (other methods paused)."],["4","Receive Ticket","Ticket delivered to your chat instantly."]].map(([n,t,d])=>(
+            <div key={n} style={{background:"white",borderRadius:14,padding:16,boxShadow:"0 2px 10px rgba(0,47,108,.06)",textAlign:"center"}}>
+              <div style={{width:36,height:36,background:A,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",color:"white",fontWeight:900,fontSize:16,margin:"0 auto 10px"}}>{n}</div>
+              <p style={{fontWeight:900,fontSize:13,color:B,marginBottom:4}}>{t}</p>
+              <p style={{fontSize:12,color:"#888",lineHeight:1.6}}>{d}</p>
+            </div>
+          ))}
+        </div>
+        <h2 style={{fontSize:19,fontWeight:900,color:B,letterSpacing:2,borderBottom:"3px solid "+A,paddingBottom:7,marginBottom:14}}>HOST STADIUMS</h2>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(230px,1fr))",gap:10,marginBottom:32}}>
+          {IMGS.map((src,i)=>(
+            <div key={i} style={{borderRadius:12,overflow:"hidden",height:155,position:"relative",background:BGFB[i]}}>
+              <img src={src} alt={STADIUMS[i]} style={{width:"100%",height:"100%",objectFit:"cover",display:imgErr["g"+i]?"none":"block"}} onError={()=>setImgErr(p=>({...p,["g"+i]:true}))}/>
+              {imgErr["g"+i]&&<div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:6}}><div style={{fontSize:34,opacity:.3}}>🏟</div><div style={{color:"rgba(255,255,255,.5)",fontSize:11,fontWeight:700}}>{STADIUMS[i]}</div></div>}
+              <div style={{position:"absolute",bottom:0,left:0,right:0,background:"linear-gradient(transparent,rgba(0,0,0,.7))",padding:"18px 12px 9px"}}><p style={{color:"white",fontSize:11,fontWeight:700}}>{STADIUMS[i]}</p></div>
+            </div>
+          ))}
+        </div>
+        <h2 style={{fontSize:19,fontWeight:900,color:B,letterSpacing:2,borderBottom:"3px solid "+A,paddingBottom:7,marginBottom:12}}>MEN'S WORLD RANKING</h2>
+        <div style={{background:"white",borderRadius:14,overflow:"hidden",boxShadow:"0 2px 14px rgba(0,47,108,.07)",marginBottom:32}}>
+          {RANKS.map((r,i)=>(
+            <div key={r.r} style={{display:"grid",gridTemplateColumns:"42px 38px 1fr 100px",padding:"12px 14px",alignItems:"center",borderBottom:i<RANKS.length-1?"1px solid #f0f5fa":"none",background:r.r<=2?"#f0f8ff":"white"}}>
+              <span style={{fontSize:17,fontWeight:900,color:r.r===1?A:r.r===2?"#aaa":"#ddd"}}>{r.r}</span>
+              <span style={{fontSize:18}}>{FLAGS[r.c]||r.c}</span>
+              <div><div style={{fontWeight:700,fontSize:14,color:r.r<=2?B:"#333"}}>{r.c}</div><div style={{fontSize:10,color:"#bbb"}}>{r.n}</div></div>
+              <div style={{textAlign:"right",fontWeight:700,fontSize:13,color:r.r===1?A:"#555"}}>{r.pts}</div>
+            </div>
+          ))}
+        </div>
+        <h2 style={{fontSize:19,fontWeight:900,color:B,letterSpacing:2,borderBottom:"3px solid "+A,paddingBottom:7,marginBottom:14}}>FEATURED MATCHES</h2>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:12,marginBottom:14}}>
+          {matches.slice(0,6).map(m=>{const sc=STAGE_C[m.s]||{bg:"#f0f4f8",c:"#333"};return(<div key={m.id} onClick={()=>enquire(m.n)} style={{background:"white",borderRadius:12,padding:16,border:"1px solid #e0eaf5",cursor:"pointer"}}>
+            <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}><span style={{background:sc.bg,color:sc.c,fontSize:10,fontWeight:700,letterSpacing:1,padding:"3px 10px",borderRadius:20}}>{m.s}</span><span style={{fontWeight:900,fontSize:18,color:A}}>${Math.round(m.p*.8)}</span></div>
+            <p style={{fontWeight:900,fontSize:16,color:B,marginBottom:4}}>{m.n}</p>
+            <p style={{fontSize:12,color:"#777",marginBottom:2}}>{fmt(m.d)} - {m.t}</p>
+            <p style={{fontSize:11,color:"#aaa",marginBottom:8}}>{m.v}</p>
+            <div style={{background:"#fff3e0",borderRadius:6,padding:"3px 10px",display:"inline-block"}}><span style={{fontSize:10,color:"#d97706",fontWeight:700}}>LIMITED AVAILABILITY</span></div>
+          </div>);})}
+        </div>
+        <button onClick={()=>setPage("store")} style={{width:"100%",padding:"12px",background:A,color:"white",border:"none",borderRadius:9,fontWeight:900,fontSize:13,letterSpacing:2,marginBottom:32}}>VIEW ALL MATCHES</button>
+        <div style={{background:B,borderRadius:14,padding:"22px 20px",textAlign:"center"}}>
+          <p style={{color:"rgba(255,255,255,.35)",fontSize:9,letterSpacing:4,marginBottom:16}}>FIFA OFFICIAL PARTNERS</p>
+          <div style={{display:"flex",flexWrap:"wrap",justifyContent:"center",gap:"10px 30px"}}>{PARTNERS.map(p=><div key={p} style={{color:"white",fontWeight:700,fontSize:12,letterSpacing:2,opacity:.8}}>{p}</div>)}</div>
+        </div>
+      </div>
+      <footer style={{background:"#001428",color:"rgba(255,255,255,.35)",padding:"22px 20px",textAlign:"center"}}>
+        <div style={{fontSize:16,fontWeight:900,letterSpacing:4,color:"rgba(255,255,255,.1)",marginBottom:8}}>FIFAResell</div>
+        <div style={{display:"flex",justifyContent:"center",gap:16,flexWrap:"wrap",fontSize:12,marginBottom:10}}>{["Privacy","Terms","Cookies","Buyer Protection","Contact"].map(l=><span key={l} style={{cursor:"pointer"}}>{l}</span>)}</div>
+        <p style={{fontSize:11}}>2026 FIFAResell Marketplace. Independent reseller platform.</p>
+      </footer>
+    </div>
+  )}
+
+  {page==="store"&&(
+    <div style={{maxWidth:980,margin:"0 auto",padding:"26px 14px"}} className="fi">
+      <h2 style={{fontSize:22,fontWeight:900,color:B,marginBottom:4}}>TICKET MARKETPLACE</h2>
+      <p style={{fontSize:13,color:"#666",marginBottom:16}}>Verified resellers. Escrow protected. Click any match to connect.</p>
+      <input style={{width:"100%",padding:"12px 16px",border:"2px solid #d8e4f0",borderRadius:10,fontSize:14,outline:"none",marginBottom:20,display:"block"}} placeholder="Search by team, venue, date or stage..." value={srch} onChange={e=>setSrch(e.target.value)}/>
+      {["Group Stage","Round of 16","Quarter-Final","Semi-Final","Final"].map(stage=>{
+        const sm=filteredStore.filter(m=>m.s===stage);if(!sm.length)return null;
+        const sc=STAGE_C[stage]||{bg:"#f0f4f8",c:"#333"};
+        return(<div key={stage} style={{marginBottom:24}}>
+          <div style={{background:sc.bg,color:sc.c,display:"inline-block",padding:"5px 16px",borderRadius:20,fontSize:12,fontWeight:900,letterSpacing:2,marginBottom:10}}>{stage.toUpperCase()}</div>
+          {sm.map(m=>(<div key={m.id} style={{background:"white",borderRadius:12,padding:"16px",border:"1px solid #e0eaf5",display:"flex",alignItems:"center",flexWrap:"wrap",gap:14,marginBottom:10}}>
+            <div style={{flex:1,minWidth:180}}><p style={{fontWeight:900,fontSize:18,color:B,marginBottom:4}}>{m.n}</p><p style={{fontSize:12,color:"#777",marginBottom:2}}>{fmt(m.d)} - {m.t}</p><p style={{fontSize:12,color:"#999",marginBottom:8}}>{m.v}</p><div style={{background:"#fff3e0",borderRadius:6,padding:"3px 10px",display:"inline-block"}}><span style={{fontSize:10,color:"#d97706",fontWeight:700}}>LIMITED AVAILABILITY</span></div></div>
+            <div style={{textAlign:"right",minWidth:120,flexShrink:0}}><p style={{fontSize:12,color:"#ccc",textDecoration:"line-through"}}>${m.p}</p><p style={{fontSize:22,fontWeight:900,color:A}}>${Math.round(m.p*.8)}</p><p style={{fontSize:10,color:"#aaa",marginBottom:10,fontStyle:"italic"}}>+ reseller fee</p><button onClick={()=>enquire(m.n)} style={{background:A,color:"white",border:"none",borderRadius:7,padding:"9px 18px",fontWeight:700,fontSize:12}}>ENQUIRE</button></div>
+          </div>))}
+        </div>);
+      })}
+      <div style={{background:"#fff8e1",border:"2px solid #fbbf24",borderRadius:12,padding:"20px",textAlign:"center",marginTop:8}}>
+        <p style={{fontWeight:700,fontSize:16,color:"#92400e",marginBottom:6}}>Can't find what you need?</p>
+        <p style={{fontSize:13,color:"#78350f",marginBottom:14,lineHeight:1.6}}>Our resellers have more tickets. Message us.</p>
+        <button onClick={()=>enquire(null)} style={{background:"#f59e0b",color:"white",border:"none",borderRadius:8,padding:"11px 24px",fontWeight:700,fontSize:13}}>Contact Reseller Team</button>
+      </div>
+    </div>
+  )}
+
+  {page==="mytickets"&&(
+    <div style={{maxWidth:560,margin:"0 auto",padding:"26px 14px"}} className="fi">
+      <h2 style={{fontSize:22,fontWeight:900,color:B,marginBottom:4}}>MY TICKETS</h2>
+      <p style={{fontSize:13,color:"#666",marginBottom:18}}>Tickets sent by our reseller team appear here.</p>
+      {myTickets.length===0?<div style={{background:"white",borderRadius:14,padding:"60px 20px",textAlign:"center"}}><div style={{fontSize:50,marginBottom:12}}>🎟</div><p style={{fontSize:18,fontWeight:700,color:B,marginBottom:8}}>No tickets yet</p><p style={{color:"#aaa",marginBottom:20,fontSize:13}}>Browse the marketplace and enquire about a match.</p><button onClick={()=>setPage("store")} style={{background:A,color:"white",border:"none",borderRadius:8,padding:"12px 26px",fontWeight:900,fontSize:13,letterSpacing:1}}>BROWSE MARKETPLACE</button></div>
+      :myTickets.map(t=>(<div key={t.id} style={{marginBottom:22}}>
+        <Ticket match={{n:t.n,s:t.s,d:t.d,t:t.t,v:t.v}} holder={t.holder||user} seat={t.seat} tid={t.id} locked={t.locked}/>
+        {t.locked&&<div style={{background:"#fff8e1",border:"2px solid #fbbf24",borderRadius:10,padding:"12px 16px",marginTop:10}}>
+          <p style={{fontWeight:700,color:"#92400e",fontSize:14,marginBottom:5}}>Code Required - Contact Support</p>
+          <p style={{fontSize:12,color:"#78350f",lineHeight:1.5,marginBottom:10}}>Reply in your reseller chat to activate and get your seat details.</p>
+          <button onClick={()=>setRchat({})} style={{background:A,color:"white",border:"none",borderRadius:7,padding:"9px 18px",fontWeight:700,fontSize:12}}>Open Reseller Chat</button>
+        </div>}
+      </div>))}
+    </div>
+  )}
+
+  {page==="about"&&(
+    <div style={{maxWidth:800,margin:"0 auto",padding:"26px 14px"}} className="fi">
+      <h2 style={{fontSize:22,fontWeight:900,color:B,marginBottom:18}}>ABOUT FIFARESELL</h2>
+      <div style={{background:"white",borderRadius:14,overflow:"hidden",marginBottom:18}}>
+        <div style={{height:190,background:BGFB[1],position:"relative",overflow:"hidden"}}>
+          <img src={IMGS[1]} alt="" style={{width:"100%",height:"100%",objectFit:"cover",display:imgErr["about"]?"none":"block"}} onError={()=>setImgErr(p=>({...p,about:true}))}/>
+          {imgErr["about"]&&<div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",opacity:.12}}><div style={{fontSize:90,lineHeight:1}}>🏆</div></div>}
+        </div>
+        <div style={{padding:22}}>
+          <p style={{fontSize:18,fontWeight:900,color:B,marginBottom:10}}>Connecting Resellers Directly to Buyers</p>
+          <p style={{fontSize:14,color:"#555",lineHeight:1.75,marginBottom:10}}>FIFAResell is the world's leading FIFA World Cup 2026 ticket marketplace. We connect verified resellers directly with football fans. Every transaction is supervised by our escrow agent team.</p>
+          <p style={{fontSize:14,color:"#555",lineHeight:1.75}}>Only Gift Card payments are currently accepted due to high transaction volume.</p>
+        </div>
+      </div>
+      <div style={{background:"#fff8e1",border:"2px solid #fbbf24",borderRadius:12,padding:"16px 18px",marginBottom:18}}>
+        <p style={{fontWeight:700,color:"#92400e",fontSize:13,marginBottom:10}}>🎁 Accepted Gift Cards</p>
+        <div style={{display:"flex",flexWrap:"wrap",gap:8}}>{GIFTS.map(g=><div key={g.lb} style={{background:"#fef3c7",borderRadius:8,padding:"8px 12px",display:"flex",alignItems:"center",gap:6}}><span style={{fontSize:18}}>🎁</span><span style={{fontSize:12,fontWeight:700,color:"#92400e"}}>{g.lb}</span></div>)}</div>
+      </div>
+      <div style={{background:B,borderRadius:12,padding:"22px",textAlign:"center",color:"white"}}>
+        <p style={{fontSize:18,fontWeight:900,marginBottom:8}}>Ready to find your tickets?</p>
+        <button onClick={()=>setPage("store")} style={{background:A,color:"white",border:"none",borderRadius:8,padding:"12px 28px",fontWeight:900,fontSize:13,letterSpacing:1}}>BROWSE MARKETPLACE</button>
+      </div>
+    </div>
+  )}
+
+  {page==="admin"&&(
+    <div className="fi">
+      {isAdmin?<Admin user={user} allChats={allChats} setAllChats={updateChats} matches={matches} setMatches={setMatches} openChat={email=>setRchat({targetUser:email,isAdminChat:true})} onSendTicket={email=>setSendFor(email||"")} notify={notify}/>
+      :<div style={{textAlign:"center",padding:"80px 20px"}}><div style={{fontSize:48,marginBottom:14}}>🔒</div><p style={{fontSize:17,fontWeight:700,color:B}}>Access Denied</p></div>}
+    </div>
+  )}
+
+  {escrow!==null&&<EscrowPrompt matchName={escrow} seller={seller} onYes={()=>{setEscrow(null);setRchat({});}} onNo={()=>{setEscrow(null);setRchat({});}}/>}
+  {sellerPop&&<SellerProfile seller={seller} onClose={()=>setSellerPop(false)}/>}
+  {rchat!==null&&<ResellerChat user={user} seller={seller} matchName={rchat.matchName||null} isAdmin={isAdmin&&!!rchat.isAdminChat} targetUser={rchat.targetUser||null} allChats={allChats} setAllChats={updateChats} onClose={()=>setRchat(null)} onSendTicket={isAdmin?email=>setSendFor(email||""):null} onShowProfile={()=>setSellerPop(true)}/>}
+  {sendFor!==null&&<SendTicket toEmail={sendFor} matches={matches} allChats={allChats} setAllChats={updateChats} onClose={()=>setSendFor(null)} notify={notify}/>}
+</div>
+```
+
+);
+}
+
+const root=ReactDOM.createRoot(document.getElementById(“root”));
+root.render(<App/>);
+</script>
+
+</body>
+</html>
